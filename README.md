@@ -1,2 +1,241 @@
-# socApiHw
-Social API homework
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In this assignment, you'll create a Python script to perform a sentiment analysis of the Twitter activity of various news oulets, and to present your findings visually.\n",
+    "\n",
+    "Your final output should provide a visualized summary of the sentiments expressed in Tweets sent out by the following news organizations: BBC, CBS, CNN, Fox, and New York times.\n",
+    "\n",
+    "The first plot will be and/or feature the following:\n",
+    "\n",
+    "Be a scatter plot of sentiments of the last 100 tweets sent out by each news organization, ranging from -1.0 to 1.0, where a score of 0 expresses a neutral sentiment, -1 the most negative sentiment possible, and +1 the most positive sentiment possible.\n",
+    "Each plot point will reflect the compound sentiment of a tweet.\n",
+    "Sort each plot point by its relative timestamp.\n",
+    "The second plot will be a bar plot visualizing the overall sentiments of the last 100 tweets from each organization. For this plot, you will again aggregate the compound sentiments analyzed by VADER.\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Dependencies\n",
+    "import tweepy\n",
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import matplotlib.pyplot as plt\n",
+    "from pprint import pprint\n",
+    "import matplotlib.patches as mpatches\n",
+    "\n",
+    "# Import and Initialize Sentiment Analyzer\n",
+    "from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer\n",
+    "analyzer = SentimentIntensityAnalyzer()\n",
+    "\n",
+    "# Twitter API Keys\n",
+    "from config import (consumer_key, \n",
+    "                    consumer_secret, \n",
+    "                    access_token, \n",
+    "                    access_token_secret)\n",
+    "\n",
+    "# Setup Tweepy API Authentication\n",
+    "auth = tweepy.OAuthHandler(consumer_key, consumer_secret)\n",
+    "auth.set_access_token(access_token, access_token_secret)\n",
+    "api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#the target news organziations\n",
+    "# Target Search Term\n",
+    "# target_terms = (\"@BBC\", \"@CBS\", \"@CNN\",\n",
+    "#                 \"@FoxNews\", \"@nytimes\")\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Target User\n",
+    "target_user = [\"@BBC\", \"@CNN\", \"@CBS\", \"@FoxNews\", \"@nytimes\"]\n",
+    "\n",
+    "#Create dataframe to store all Tweets for each company and time\n",
+    "newsTweets_df = pd.DataFrame()\n",
+    "\n",
+    "indexCntr = 0\n",
+    "newsCo_cntr = 0\n",
+    "# Tweet Texts\n",
+    "tweet_texts = []\n",
+    "# Loop through all target users\n",
+    "for target in target_user:\n",
+    "    print ('Target = ', target_user[newsCo_cntr])\n",
+    "\n",
+    "\n",
+    "    #nbr of tweets for certain newco\n",
+    "    tweet_ago = 1\n",
+    "    # Create a loop to iteratively run API requests\n",
+    "    for x in range(5):#5 to get the top 100\n",
+    "\n",
+    "        # Get all tweets from home feed (for each page specified)\n",
+    "        public_tweets = api.user_timeline(target_user[newsCo_cntr], page=x+1)\n",
+    "\n",
+    "        # Loop through all tweets\n",
+    "        for tweet in public_tweets:\n",
+    "\n",
+    "            # Print Tweet\n",
+    "            print('\\nTweet nbr:', indexCntr, ' for :', target_user[newsCo_cntr])\n",
+    "            print('\\n------------------')\n",
+    "            #print(tweet[\"text\"])\n",
+    "\n",
+    "            # Store Tweet in Array\n",
+    "            #tweet_texts.append(tweet[\"text\"])\n",
+    "            newsTweets_df.set_value(indexCntr, \"text\", tweet['text'])\n",
+    "            newsTweets_df.set_value(indexCntr, \"twtAgo\", tweet_ago)\n",
+    "            newsTweets_df.set_value(indexCntr, \"time\", tweet['created_at'])\n",
+    "            newsTweets_df.set_value(indexCntr, \"newsCo\", target_user[newsCo_cntr])\n",
+    "            tweet_ago = tweet_ago + 1\n",
+    "\n",
+    "            # Run Vader Analysis on each tweet\n",
+    "            results = analyzer.polarity_scores(tweet[\"text\"])\n",
+    "          \n",
+    "            newsTweets_df.set_value(indexCntr, \"compound\", results['compound'])\n",
+    "            \n",
+    "            newsTweets_df.set_value(indexCntr, \"pos\", results['pos'])\n",
+    "            \n",
+    "            newsTweets_df.set_value(indexCntr, \"neu\", results['neu'])\n",
+    "            \n",
+    "            newsTweets_df.set_value(indexCntr, \"neg\", results['neg'])\n",
+    "\n",
+    "            #finish the loop and increment counter\n",
+    "            indexCntr = indexCntr + 1\n",
+    "    newsCo_cntr = newsCo_cntr + 1\n",
+    "        "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#create data frames for calculations for graphs\n",
+    "\n",
+    "bbc_df = newsTweets_df.loc[newsTweets_df[\"newsCo\"] == \"@BBC\",:]\n",
+    "cnn_df = newsTweets_df.loc[newsTweets_df[\"newsCo\"] == \"@CNN\",:]\n",
+    "cbs_df = newsTweets_df.loc[newsTweets_df[\"newsCo\"] == \"@CBS\",:]\n",
+    "fox_df = newsTweets_df.loc[newsTweets_df[\"newsCo\"] == \"@FoxNews\",:]\n",
+    "nyt_df = newsTweets_df.loc[newsTweets_df[\"newsCo\"] == \"@nytimes\",:]\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#create average compound scores for each news outlet\n",
+    "bbc_avg = bbc_df['compound'].mean()\n",
+    "cnn_avg = cnn_df['compound'].mean()\n",
+    "cbs_avg = cbs_df['compound'].mean()\n",
+    "fox_avg = fox_df['compound'].mean()\n",
+    "nyt_avg = nyt_df['compound'].mean()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Build scatter plot of the compound of each newsCo\n",
+    "\n",
+    "#BBC Plots\n",
+    "x_bbc = bbc_df['twtAgo']\n",
+    "y_bbc = bbc_df['compound']\n",
+    "plt.scatter(x_bbc, y_bbc, s=10, c='red', alpha=.75,linewidth=2)\n",
+    "\n",
+    "#cnn Plots\n",
+    "x_cnn = cnn_df['twtAgo']\n",
+    "y_cnn = cnn_df['compound']\n",
+    "plt.scatter(x_cnn, y_cnn, s=10, c='blue', alpha=.75,linewidth=2)\n",
+    "\n",
+    "#cbs Plots\n",
+    "x_cbs = cbs_df['twtAgo']\n",
+    "y_cbs = cbs_df['compound']\n",
+    "plt.scatter(x_cbs, y_cbs, s=10, c='green', alpha=.75,linewidth=2)\n",
+    "\n",
+    "#fox Plots\n",
+    "x_fox = fox_df['twtAgo']\n",
+    "y_fox = fox_df['compound']\n",
+    "plt.scatter(x_fox, y_fox, s=10, c='yellow', alpha=.75,linewidth=2)\n",
+    "\n",
+    "#nyt Plots\n",
+    "x_nyt = nyt_df['twtAgo']\n",
+    "y_nyt = nyt_df['compound']\n",
+    "plt.scatter(x_nyt, y_nyt, s=10, c='purple', alpha=.75,linewidth=2)\n",
+    "\n",
+    "\n",
+    "# Add titles (main and on axis)\n",
+    "plt.xlabel(\"Tweets ago\")\n",
+    "plt.ylabel(\"Tweet Polarity\")\n",
+    "plt.title(\"News Sentiment\")\n",
+    "#plt.legend([red_dot, blue_patch, gold_patch], ['@BBC', '@CNN','@CBS','@FoxNews','@nytimes'])\n",
+    "#plt.legend([red_bbc, blue_cnn], [\"@BBC\", \"@CNN\"])\n",
+    "bbc_mk = mpatches.Patch(color='red')\n",
+    "cnn_mk = mpatches.Patch(color='blue')\n",
+    "cbs_mk = mpatches.Patch(color='green')\n",
+    "fox_mk = mpatches.Patch(color='yellow')\n",
+    "nyt_mk = mpatches.Patch(color='purple')\n",
+    "#plt.legend(loc=\"best\")\n",
+    "plt.legend([bbc_mk, cnn_mk, cbs_mk, fox_mk, nyt_mk], ['@BBC', '@CNN','@CBS','@FoxNews','@nytimes'], loc='best') \n",
+    "# Save the figure\n",
+    "plt.savefig(\"NewSentiment.png\")\n",
+    "plt.show()\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Build scatter plot of the compound of each newsCo\n",
+    "x = ['@BBC', '@CNN', '@CBS', '@FoxNews', '@nytimes']\n",
+    "y = [bbc_avg, cnn_avg, cbs_avg, fox_avg, nyt_avg]\n",
+    "c = ['red', 'blue', 'green', 'yellow', 'orange']\n",
+    "index = np.arange(len(x))\n",
+    "plt.bar(index, y, color = c)\n",
+    "plt.xlabel('News Agency', fontsize=15)\n",
+    "plt.ylabel('Polarity', fontsize=15)\n",
+    "plt.xticks(index, x, fontsize=15, rotation=45)\n",
+    "plt.title('Average Polarity of each news org', fontsize=15)\n",
+    "# Save the figure\n",
+    "plt.savefig(\"AgrSentiment.png\")\n",
+    "plt.show()\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
